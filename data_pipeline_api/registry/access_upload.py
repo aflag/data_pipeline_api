@@ -178,6 +178,7 @@ def _add_model_run(
     model_version_str: str,
     model_name: str,
     run_id: str,
+    open_timestamp: dt,
     responsible_person: YamlDict,
     inputs: List[str],
     outputs: List[YamlDict],
@@ -195,7 +196,7 @@ def _add_model_run(
         DataRegistryTarget.model_run,
         {
             DataRegistryField.release_id: run_id,
-            DataRegistryField.release_date: dt.now(),
+            DataRegistryField.release_date: open_timestamp,
             DataRegistryField.description: run_id,
             DataRegistryField.model_config: "",
             DataRegistryField.submission_script: "",
@@ -245,6 +246,7 @@ def upload_model_run(
     model_version_str = config_yaml["model_version"]
     model_name = config_yaml["model_name"]
     accessibility = _create_target_data_dict(DataRegistryTarget.accessibility, {DataRegistryField.name: accessibility_name})
+    open_timestamp = config_yaml["open_timestamp"]
     inputs = []
     outputs = []
     posts = []
@@ -281,7 +283,7 @@ def upload_model_run(
             outputs.append(data_product_component_version)
 
     _add_model_run(
-        posts, model_version_str, model_name, run_id, responsible_person, inputs, outputs, data_registry_url, token
+        posts, model_version_str, model_name, run_id, open_timestamp, responsible_person, inputs, outputs, data_registry_url, token
     )
 
     posts = unique_posts(posts)

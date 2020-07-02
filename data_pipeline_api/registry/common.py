@@ -111,7 +111,7 @@ def get_remote_filesystem_and_path(protocol: str, uri: str, path: str, storage_o
         uri = f"github://{uri.split('/')[0]}:{uri.split('/')[1]}@master/"
     if protocol == "file":
         storage_options.setdefault("auto_mkdir", True)
-        uri = Path(urllib.parse.urlsplit(uri).netloc) / Path(path)
+        uri = Path(urllib.parse.urlsplit(uri).path) / Path(path)
         uri.parent.mkdir(parents=True, exist_ok=True)
         return LocalFileSystem(**storage_options), uri.as_posix()
     elif protocol in {"http", "https"}:
