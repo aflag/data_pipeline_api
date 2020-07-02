@@ -11,11 +11,11 @@ Options:
                         DATA_REGISTRY_URL env variable followed by
                         https://data.scrc.uk/api/.
 
-  --token TEXT          github personal access token. Defaults to
-                        DATA_REGISTRY_ACCESS_TOKEN env if not passed.Personal
-                        access tokens can be created from
-                        https://github.com/settings/tokens, only
-                        read:org permissions are required.
+  --token TEXT          data registry access token. Defaults to
+                        DATA_REGISTRY_ACCESS_TOKEN env if not passed. access
+                        tokens can be created from the data registry's get-
+                        token end point
+
 
   --help                Show this message and exit.
 
@@ -25,8 +25,35 @@ Options:
 python -m data_pipeline.registry.download --config data_pipeline_api/registry/example_configs/simple_network_sim_config.yaml
 ```
 
+# upload from access.yaml
+```
+python -m registry.access_upload --help
+Usage: access_upload.py [OPTIONS]
+
+Options:
+  --config TEXT                   Path to the access yaml file.  [required]
+  -u, --remote-uri TEXT           URI to the root of the storage  [required]
+  -o, --remote-option <TEXT TEXT>...
+                                  (key, value) pairs that are passed to the
+                                  remote storage, e.g. credentials
+
+  --accessibility TEXT            accessibility of the data, defaults to
+                                  public
+
+  --data-registry TEXT            URL of the data registry API. Defaults to
+                                  DATA_REGISTRY_URL env variable followed by
+                                  https://data.scrc.uk/api/.
+
+  --token TEXT                    data registry access token. Defaults to
+                                  DATA_REGISTRY_ACCESS_TOKEN env if not
+                                  passed. access tokens can be created from
+                                  the data registry's get-token end point
+
+  --help                          Show this message and exit.
+```
+
 # upload
-Does not yet parse the access.yaml for upload, but will parse an upload config yaml file of slightly arbitrary definition to write to the data registry.
+Parses an upload config yaml file of slightly arbitrary definition to write to the data registry.
 
 Sections are:
 * reference - items to lookup in the data registry
@@ -43,11 +70,11 @@ Options:
                         DATA_REGISTRY_URL env variable followed by
                         https://data.scrc.uk/api/.
 
-  --token TEXT          github personal access token. Defaults to
-                        DATA_REGISTRY_ACCESS_TOKEN env if not passed.Personal
-                        access tokens can be created from
-                        https://github.com/settings/tokens, only
-                        read:org permissions are required.
+  --token TEXT          data registry access token. Defaults to
+                        DATA_REGISTRY_ACCESS_TOKEN env if not passed. access
+                        tokens can be created from the data registry's get-
+                        token end point
+
 
   --help                Show this message and exit.
 ```
