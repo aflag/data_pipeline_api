@@ -1,7 +1,14 @@
 # contents of test_app.py, a simple test for our API retrieval
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
-from data_pipeline_api.registry.common import get_on_end_point, get_end_point, get_headers
+import pytest
+
+from data_pipeline_api.registry.common import (
+    get_on_end_point,
+    get_end_point,
+    get_headers,
+    get_remote_filesystem_and_path,
+)
 
 DATA_REGISTRY_URL = "data/"
 TOKEN = "token"
@@ -47,3 +54,197 @@ def test_get_on_end_point():
         get.return_value = MockResponse(json_data_2)
         assert get_on_end_point(get_end_point(DATA_REGISTRY_URL, "target2"), TOKEN) == json_data_2
         assert get_on_end_point(get_end_point(DATA_REGISTRY_URL, "target1"), TOKEN) == json_data_1
+
+
+@pytest.mark.parametrize(
+    ["patch_fs", "protocol", "uri", "path", "kwargs", "expected_path", "expected_call"],
+    [
+        [
+            "GithubFileSystem",
+            "github",
+            "github://someorg:somerepo@somesha/",
+            "data/data.csv",
+            dict(token=TOKEN),
+            "/data/data.csv",
+            dict(org="someorg", repo="somerepo", sha="somesha", token=TOKEN),
+        ],
+        [
+            "GithubFileSystem",
+            "github",
+            "someorg/somerepo",
+            "data/data.csv",
+            dict(token=TOKEN),
+            "/data/data.csv",
+            dict(org="someorg", repo="somerepo", sha="master", token=TOKEN),
+        ],
+        [
+            "LocalFileSystem",
+            "file",
+            "file://C:\\test",
+            "data/data.csv",
+            {},
+            "C:/test/data/data.csv",
+            dict(auto_mkdir=True),
+        ],
+        [
+            "LocalFileSystem",
+            "file",
+            "file:///test",
+            "data/data.csv",
+            dict(auto_mkdir=False),
+            "/test/data/data.csv",
+            dict(auto_mkdir=False),
+        ],
+        [
+            "LocalFileSystem",
+            "file",
+            "/test",
+            "data/data.csv",
+            dict(auto_mkdir=False),
+            "/test/data/data.csv",
+            dict(auto_mkdir=False),
+        ],
+        [
+            "HTTPFileSystem",
+            "http",
+            "http://test/",
+            "data/data.csv",
+            dict(arg=1),
+            "http://test/data/data.csv",
+            dict(arg=1),
+        ],
+        [
+            "HTTPFileSystem",
+            "https",
+            "https://test/",
+            "data/data.csv",
+            dict(arg=2),
+            "https://test/data/data.csv",
+            dict(arg=2),
+        ],
+        [
+            "HTTPFileSystem",
+            "https",
+            "https://test",
+            "data/data.csv",
+            dict(arg=3),
+            "https://test/data/data.csv",
+            dict(arg=3),
+        ],
+        [
+            "FTPFileSystem",
+            "ftp",
+            "ftp://test/",
+            "data/data.csv",
+            dict(),
+            "/data/data.csv",
+            dict(host="test", username=None, password=None),
+        ],
+        [
+            "FTPFileSystem",
+            "ftp",
+            "ftp://test/",
+            "data/data.csv",
+            dict(username="uname", password="pword"),
+            "/data/data.csv",
+            dict(host="test", username="uname", password="pword"),
+        ],
+        [
+            "FTPFileSystem",
+            "ftp",
+            "ftp://uname:pword@test/",
+            "data/data.csv",
+            dict(),
+            "/data/data.csv",
+            dict(host="test", username="uname", password="pword"),
+        ],
+        [
+            "FTPFileSystem",
+            "ftp",
+            "ftp://uname:pword@test/",
+            "data/data.csv",
+            dict(username="over_uname", password="over_pword"),
+            "/data/data.csv",
+            dict(host="test", username="over_uname", password="over_pword"),
+        ],
+        [
+            "SFTPFileSystem",
+            "sftp",
+            "sftp://test/",
+            "data/data.csv",
+            dict(),
+            "/data/data.csv",
+            dict(host="test", username=None, password=None),
+        ],
+        [
+            "SFTPFileSystem",
+            "sftp",
+            "sftp://test/",
+            "data/data.csv",
+            dict(username="uname", password="pword"),
+            "/data/data.csv",
+            dict(host="test", username="uname", password="pword"),
+        ],
+        [
+            "SFTPFileSystem",
+            "sftp",
+            "sftp://uname:pword@test/",
+            "data/data.csv",
+            dict(),
+            "/data/data.csv",
+            dict(host="test", username="uname", password="pword"),
+        ],
+        [
+            "SFTPFileSystem",
+            "sftp",
+            "sftp://uname:pword@test/",
+            "data/data.csv",
+            dict(username="over_uname", password="over_pword"),
+            "/data/data.csv",
+            dict(host="test", username="over_uname", password="over_pword"),
+        ],
+        [
+            "SFTPFileSystem",
+            "ssh",
+            "ssh://test/",
+            "data/data.csv",
+            dict(),
+            "/data/data.csv",
+            dict(host="test", username=None, password=None),
+        ],
+        [
+            "SFTPFileSystem",
+            "ssh",
+            "ssh://test/",
+            "data/data.csv",
+            dict(username="uname", password="pword"),
+            "/data/data.csv",
+            dict(host="test", username="uname", password="pword"),
+        ],
+        [
+            "SFTPFileSystem",
+            "ssh",
+            "ssh://uname:pword@test/",
+            "data/data.csv",
+            dict(),
+            "/data/data.csv",
+            dict(host="test", username="uname", password="pword"),
+        ],
+        [
+            "SFTPFileSystem",
+            "ssh",
+            "ssh://uname:pword@test/",
+            "data/data.csv",
+            dict(username="over_uname", password="over_pword"),
+            "/data/data.csv",
+            dict(host="test", username="over_uname", password="over_pword"),
+        ],
+        ["S3FileSystem", "s3", "s3://test/", "data/data.csv", dict(arg=1), "s3://test/data/data.csv", dict(arg=1),],
+    ],
+)
+def test_get_remote_filesystem_and_path(patch_fs, protocol, uri, path, kwargs, expected_path, expected_call):
+    with patch(f"data_pipeline_api.registry.common.{patch_fs}") as rfs:
+        fs, path = get_remote_filesystem_and_path(protocol, uri, path, **kwargs)
+    assert path == expected_path
+    assert rfs._mock_name == patch_fs
+    rfs.assert_called_once_with(**expected_call)

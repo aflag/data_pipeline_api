@@ -4,8 +4,8 @@ from unittest.mock import patch, call
 import pytest
 import yaml
 
-from registry.upload import resolve_references, upload_from_config
-from registry.common import get_end_point, get_headers
+from data_pipeline_api.registry.upload import resolve_references, upload_from_config
+from data_pipeline_api.registry.common import get_end_point, get_headers
 from tests.registry.common import DATA_REGISTRY_URL, TOKEN, MockResponse
 
 
@@ -147,7 +147,7 @@ def test_resolve_references_recurse():
             },
         },
     }
-    with patch("registry.upload.get_reference") as ref:
+    with patch("data_pipeline_api.registry.upload.get_reference") as ref:
 
         def side_effect(ndata, ntarget, url, token):
             return ndata["name"]

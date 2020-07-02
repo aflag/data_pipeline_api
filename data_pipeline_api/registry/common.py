@@ -97,7 +97,7 @@ class DataRegistryFilter:
     processing_script = DataRegistryField.processing_script
     source = DataRegistryField.source
     data_product = DataRegistryField.data_product
-    release_date = DataRegistryField.run_date
+    run_date = DataRegistryField.run_date
     model_version = DataRegistryField.model_version
     data_product_version = DataRegistryField.data_product_version
     name = DataRegistryField.name
@@ -114,45 +114,45 @@ FILTERS = set(
 
 
 def get_remote_filesystem_and_path(
-    protocol: str, uri: str, path: str, storage_options: Dict[str, Any] = None
+    protocol: str, uri: str, path: str, **storage_options: Dict[str, Any]
 ) -> Tuple[AbstractFileSystem, str]:
-    storage_options = {} if storage_options is None else storage_options
-    if protocol == "github" and re.match(r"\w+/\w+", uri):
-        uri = f"github://{uri.split('/')[0]}:{uri.split('/')[1]}@master/"
+    """
+    For a given protocol, root uri, path and kwargs returns the appropriate FileSystem representation and the
+    representation of path on this FileSystem required to access path.
+
+    :param protocol: protocol of the target FileSystem, e.g. https, file, github
+    :param uri: uri of the root of the FileSystem, from where path is expected to join
+    :param path: path to the location in the context of the uri
+    :param storage_options: arguments passed through to the FileSystem instantiation
+    :return: The FileSystem and access path on this FileSystem
+    """
     if protocol == "file":
         storage_options.setdefault("auto_mkdir", True)
-        uri = Path(urllib.parse.urlsplit(uri).path) / Path(path)
-        uri.parent.mkdir(parents=True, exist_ok=True)
+        uri = Path(uri.replace("file://", "")) / Path(path)
         return LocalFileSystem(**storage_options), uri.as_posix()
-    elif protocol in {"http", "https"}:
+    elif protocol in {"http", "https", "s3"}:
         # storage_options are parameters passed to request
         uri = urllib.parse.urljoin(uri, path)
-        return HTTPFileSystem(**storage_options), uri
-    elif protocol == "ftp":
+        fs_class = S3FileSystem if protocol == "s3" else HTTPFileSystem
+        return fs_class(**storage_options), uri
+    elif protocol in {"sftp", "ssh", "ftp"}:
         inferred_options = infer_storage_options(uri)
         username = storage_options.pop("username", None) or inferred_options.get("username")
         password = storage_options.pop("password", None) or inferred_options.get("password")
-        return (
-            FTPFileSystem(host=inferred_options["host"], username=username, password=password, **storage_options),
-            inferred_options["path"],
-        )
+        uri = (Path(inferred_options["path"]) / Path(path)).as_posix()
+        fs_class = FTPFileSystem if protocol == "ftp" else SFTPFileSystem
+        return fs_class(host=inferred_options["host"], username=username, password=password, **storage_options), uri
     elif protocol == "github":
+        if re.match(r"\w+/\w+", uri):
+            uri = f"github://{uri.split('/')[0]}:{uri.split('/')[1]}@master/"
         # infer options on a github uri reads the org, repo and sha incorrectly (as if it were an ftp uri)
         # this is because it uses urllib.parse.urlsplit under the hood
         inferred_options = infer_storage_options(uri)
         org = inferred_options.get("username")
         repo = inferred_options.get("password")
         sha = inferred_options.get("host") or "master"
-        return GithubFileSystem(org=org, repo=repo, sha=sha, **storage_options), inferred_options.get("path")
-    elif protocol in {"sftp", "ssh"}:
-        inferred_options = infer_storage_options(uri)
-        username = storage_options.pop("username", None) or inferred_options.get("username")
-        password = storage_options.pop("password", None) or inferred_options.get("password")
-        uri = (Path(inferred_options["path"]) / Path(path)).as_posix()
-        return SFTPFileSystem(host=inferred_options["host"], username=username, password=password), uri
-    elif protocol == "s3":
-        uri = urllib.parse.urljoin(uri, path)
-        return S3FileSystem(**storage_options), uri
+        path = (Path(inferred_options.get("path", "")) / Path(path)).as_posix()
+        return GithubFileSystem(org=org, repo=repo, sha=sha, **storage_options), path
     else:
         raise NotImplementedError(f"Unsupported remote filesystem {protocol}:{uri}")
 
@@ -179,6 +179,13 @@ def get_headers(token: str) -> Dict[str, str]:
 
 
 def build_query_string(query_data: YamlDict, data_registry_url: str) -> str:
+    """
+    Converts a dictionary of query data into a query string
+
+    :param query_data: the query data dictionary to convert
+    :param data_registry_url: the url of the data registry
+    :return: the query string generated
+    """
     def id_from_url(url: str):
         if url is not None and url.startswith(data_registry_url):
             return url.split("/")[-2]

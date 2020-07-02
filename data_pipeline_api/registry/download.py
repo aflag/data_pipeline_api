@@ -224,6 +224,8 @@ def _download_data(output_info: OutputInfo) -> None:
             f"{output_info.output_path}"
         )
         fs, source_path = get_remote_filesystem_and_path(output_info.source_protocol, output_info.source_uri, output_info.source_path)
+        if output_info.source_protocol == "file":
+            Path(source_path).parent.mkdir(parents=True, exist_ok=True)
         fs.get(
             source_path, output_info.output_path
         )

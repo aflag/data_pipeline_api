@@ -95,7 +95,9 @@ def upload_to_storage(remote_uri: str, storage_options: Dict[str, Any], data_dir
     """
     protocol = urllib.parse.urlsplit(remote_uri).scheme
     upload_path = filename.absolute().relative_to(data_directory.absolute()).as_posix()
-    fs, path = get_remote_filesystem_and_path(protocol, remote_uri, upload_path, storage_options)
+    fs, path = get_remote_filesystem_and_path(protocol, remote_uri, upload_path, **storage_options)
+    if protocol == "file":
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
     logger.info(f"Uploading {filename.as_posix()} to {path} on {remote_uri}")
     fs.put(filename.as_posix(), path)
     return path
