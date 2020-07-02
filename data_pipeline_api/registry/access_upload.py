@@ -123,7 +123,7 @@ def _add_data_registry_posts(
     model_version_str: str,
     run_id: str,
     component_name: str,
-    accessibility: str,
+    accessibility: YamlDict,
     calculated_hash: str,
     responsible_person: YamlDict,
     storage_root: YamlDict,
@@ -218,7 +218,7 @@ def upload_model_run(
     config_filename: Union[Path, str],
     remote_uri: str,
     storage_options: Dict[str, str],
-    accessibility: str,
+    accessibility_name: str,
     data_registry_url: str,
     token: str,
 ) -> None:
@@ -229,7 +229,7 @@ def upload_model_run(
     :param config_filename: file path to the configuration file
     :param remote_uri:
     :param storage_options:
-    :param accessibility:
+    :param accessibility_name:
     :param data_registry_url: base url of the data registry
     :param token: github personal access token
     """
@@ -244,7 +244,7 @@ def upload_model_run(
     responsible_person = _create_target_data_dict(DataRegistryTarget.users, {DataRegistryField.username: config["responsible_person"]})
     model_version_str = config_yaml["model_version"]
     model_name = config_yaml["model_name"]
-
+    accessibility = _create_target_data_dict(DataRegistryTarget.accessibility, {DataRegistryField.name: accessibility_name})
     inputs = []
     outputs = []
     posts = []
