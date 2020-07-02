@@ -34,6 +34,16 @@ def _create_target_data_dict(target: str, data: YamlDict) -> YamlDict:
 def _get_input_url(
     data_product_name: str, version: str, component_name: str, data_registry_url: str, token: str
 ) -> str:
+    """
+    Gets the url reference of an input parameter
+    
+    :param data_product_name: Name of the data product 
+    :param version: version of the data product 
+    :param component_name: name of the data product component used as input
+    :param data_registry_url: base url of the data registry
+    :param token: personal access token
+    :return: url reference to the input parameter data product version component
+    """
     query_data = {
         DataRegistryFilter.name: data_product_name,
     }
@@ -53,10 +63,18 @@ def _get_input_url(
     data_product_version_component = get_data(
         query_data, DataRegistryTarget.data_product_version_component, data_registry_url, token
     )
-    return data_product_version_component["url"]
+    url = data_product_version_component["url"]
+    logger.info(f"Retrieved {url} for {data_product_name}/{component_name}/{version}")
+    return url
 
 
 def _verify_hash(filename: Path, access_calculated_hash: str) -> None:
+    """
+    Verifies the hash of the file matches the calculated hash from the access log
+    
+    :param filename: file to verify the hash of 
+    :param access_calculated_hash: hash read from the access log for this filename
+    """
     with open(filename, "rb") as file:
         calculated_hash = sha1(file.read()).hexdigest()
     if access_calculated_hash != access_calculated_hash:
@@ -65,10 +83,20 @@ def _verify_hash(filename: Path, access_calculated_hash: str) -> None:
         )
 
 
-def upload_to_storage(uri: str, storage_options: Dict[str, Any], data_directory: Path, filename: Path) -> str:
-    protocol = urllib.parse.urlsplit(uri).scheme
+def upload_to_storage(remote_uri: str, storage_options: Dict[str, Any], data_directory: Path, filename: Path) -> str:
+    """
+    Uploads a file to the remote uri
+     
+    :param remote_uri: URI to the root of the storage
+    :param storage_options: (key, value) pairs that are passed to the remote storage, e.g. credentials 
+    :param data_directory: root of the data directory read from the access log
+    :param filename: file to upload
+    :return: path of the file on the remote storage
+    """
+    protocol = urllib.parse.urlsplit(remote_uri).scheme
     upload_path = filename.absolute().relative_to(data_directory.absolute()).as_posix()
-    fs, path = get_remote_filesystem_and_path(protocol, uri, upload_path, storage_options)
+    fs, path = get_remote_filesystem_and_path(protocol, remote_uri, upload_path, storage_options)
+    logger.info(f"Uploading {filename.as_posix()} to {path} on {remote_uri}")
     fs.put(filename.as_posix(), path)
     return path
 
@@ -76,12 +104,22 @@ def upload_to_storage(uri: str, storage_options: Dict[str, Any], data_directory:
 def _add_storage_type_and_root(
     posts: List[YamlDict], remote_uri: str, data_registry_url: str, token: str
 ) -> Tuple[YamlDict, YamlDict]:
+    """
+    Gets the storage type and root, adds them to the list of objects to post to the data registry, and returns them 
+    
+    :param posts: List of posts to the data registry, will be modified
+    :param remote_uri: URI to the root of the storage
+    :param data_registry_url: base url of the data registry
+    :param token: personal access token 
+    :return: the storage type and storage root dicts
+    """
     scheme = urllib.parse.urlsplit(remote_uri).scheme
     storage_type = get_data(
         {DataRegistryFilter.name: scheme}, DataRegistryTarget.storage_type, data_registry_url, token
     )
     storage_root = None
     if storage_type is None:
+        logger.info(f"No storage_type found for name {scheme}, creating storage_type and storage_root to POST.")
         storage_type = _create_target_data_dict(
             DataRegistryTarget.storage_type, {DataRegistryField.name: scheme, DataRegistryField.description: scheme}
         )
@@ -100,8 +138,12 @@ def _add_storage_type_and_root(
         for root in storage_roots:
             if root["type"] == storage_type["url"] and root["uri"] == remote_uri:
                 storage_root = root["url"]
+                logger.info(f"Found existing storage_root with name {root['name']}")
                 break
         if storage_root is None:
+            logger.info(
+                f"No storage_type found for type {storage_type['name']} and uri {remote_uri}, creating new storage_root"
+            )
             storage_root = _create_target_data_dict(
                 DataRegistryTarget.storage_root,
                 {
@@ -115,7 +157,7 @@ def _add_storage_type_and_root(
     return storage_type, storage_root
 
 
-def _add_data_registry_posts(
+def _add_data_product_output_posts(
     posts: List[YamlDict],
     path: str,
     data_product_name: str,
@@ -127,6 +169,22 @@ def _add_data_registry_posts(
     responsible_person: YamlDict,
     storage_root: YamlDict,
 ) -> YamlDict:
+    """
+    Collates the required data registry posts for this write block of the model run access yaml and returns the ultimate
+    output DataProductVersionComponent
+
+    :param posts: List of posts to the data registry, will be modified
+    :param path: StorageLocation path
+    :param data_product_name: Name of the output data product
+    :param model_version_str: version number of the model
+    :param run_id: id of the run
+    :param component_name: name of the output component
+    :param accessibility: accessibility level of the output data product
+    :param calculated_hash: calculated hash of the output data product file
+    :param responsible_person: individual responsible for this output, read from the access yaml
+    :param storage_root: StorageRoot that the path refers to
+    :return: YamlDict representation of the DataProductVersionComponent output
+    """
     storage_location = _create_target_data_dict(
         DataRegistryTarget.storage_location,
         {
@@ -169,6 +227,7 @@ def _add_data_registry_posts(
     posts.extend(
         [storage_location, data_product_type, data_product, data_product_version, data_product_version_component]
     )
+    logger.debug(f"Creating DataProductVersionComponent: {data_product_version_component}")
     return data_product_version_component
 
 
@@ -184,6 +243,20 @@ def _add_model_run(
     data_registry_url: str,
     token: str,
 ) -> None:
+    """
+    Generates the post required for adding a model run and appends it to the list of posts.
+
+    :param posts: List of posts to the data registry, will be modified
+    :param model_version_str: version number of the model
+    :param model_name: name of the model
+    :param run_id: id of this run, read from the access log
+    :param open_timestamp: timestamp that the access log was first opened as the run date
+    :param responsible_person: individual responsible for this model run, read from the access yaml
+    :param inputs: List of input data product version component reference urls
+    :param outputs: List of output data product version component YamlDicts
+    :param data_registry_url: base url of the data registry
+    :param token: personal access token
+    """
     model = get_data({DataRegistryFilter.name: model_name}, DataRegistryTarget.model, data_registry_url, token)
     model_version = get_data(
         {DataRegistryFilter.version_identifier: model_version_str, DataRegistryFilter.model: model["url"]},
@@ -206,11 +279,19 @@ def _add_model_run(
             DataRegistryField.outputs: outputs,
         },
     )
+    logger.debug(f"Created ModelRun: {model_run}")
     posts.append(model_run)
 
 
 def unique_posts(posts: List[YamlDict]) -> List[YamlDict]:
+    """
+    Removes duplicate posts from the list of posts while maintaining their ordering.
+
+    :param posts: List of posts to the data registry, will be modified
+    :return: Unique list of posts to the data registry
+    """
     set_of_yamls = {yaml.safe_dump(d): None for d in posts}
+    logger.info(f"Removed {len(posts) - len(set_of_yamls)} duplicate POSTs.")
     return [yaml.safe_load(t) for t in set_of_yamls.keys()]
 
 
@@ -227,11 +308,11 @@ def upload_model_run(
     appropriate, resolving references to other data where required.
 
     :param config_filename: file path to the configuration file
-    :param remote_uri:
-    :param storage_options:
-    :param accessibility_name:
+    :param remote_uri: URI to the root of the storage
+    :param storage_options: (key, value) pairs that are passed to the remote storage, e.g. credentials
+    :param accessibility_name: name of the accessibility level the outputs of this model run have
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     """
     config_filename = Path(config_filename)
     with open(config_filename, "r") as cf:
@@ -241,10 +322,14 @@ def upload_model_run(
         data_directory = config_filename.parent / data_directory
     run_id = config["run_id"]
     config_yaml = config["config"]
-    responsible_person = _create_target_data_dict(DataRegistryTarget.users, {DataRegistryField.username: config["responsible_person"]})
+    responsible_person = _create_target_data_dict(
+        DataRegistryTarget.users, {DataRegistryField.username: config["responsible_person"]}
+    )
     model_version_str = config_yaml["model_version"]
     model_name = config_yaml["model_name"]
-    accessibility = _create_target_data_dict(DataRegistryTarget.accessibility, {DataRegistryField.name: accessibility_name})
+    accessibility = _create_target_data_dict(
+        DataRegistryTarget.accessibility, {DataRegistryField.name: accessibility_name}
+    )
     open_timestamp = config_yaml["open_timestamp"]
     inputs = []
     outputs = []
@@ -267,7 +352,7 @@ def upload_model_run(
 
             path = upload_to_storage(remote_uri, storage_options, data_directory, filename)
 
-            data_product_component_version = _add_data_registry_posts(
+            data_product_component_version = _add_data_product_output_posts(
                 posts,
                 path,
                 data_product_name,
@@ -282,7 +367,16 @@ def upload_model_run(
             outputs.append(data_product_component_version)
 
     _add_model_run(
-        posts, model_version_str, model_name, run_id, open_timestamp, responsible_person, inputs, outputs, data_registry_url, token
+        posts,
+        model_version_str,
+        model_name,
+        run_id,
+        open_timestamp,
+        responsible_person,
+        inputs,
+        outputs,
+        data_registry_url,
+        token,
     )
 
     posts = unique_posts(posts)
@@ -331,7 +425,7 @@ def upload_model_run_cli(config, remote_uri, remote_option, accessibility, data_
         config_filename=config,
         remote_uri=remote_uri,
         storage_options=remote_options,
-        accessibility=accessibility,
+        accessibility_name=accessibility,
         data_registry_url=data_registry,
         token=token,
     )

@@ -21,7 +21,7 @@ def resolve_references(data: YamlDict, data_registry_url: str, token: str) -> Di
 
     :param data: Dict of data, keys are str and values are either str or a nested dict referring to another data
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     :return: A new dict of data that will have been flatted to Dict[str, str] with references resolved to urls
     """
 
@@ -46,7 +46,7 @@ def upload_from_config(config: Dict[str, List[YamlDict]], data_registry_url: str
 
     :param config: loaded configuration
     :param data_registry_url: base url of the data registry 
-    :param token: github personal access token
+    :param token: personal access token
     """
     for method in ("PATCH", "POST"):
         data_list = config.get(method.lower(), [])
@@ -102,7 +102,7 @@ def upload_from_config_file(config_filename: Union[Path, str], data_registry_url
     
     :param config_filename: file path to the configuration file
     :param data_registry_url: base url of the data registry 
-    :param token: github personal access token
+    :param token: personal access token
     """
     config_filename = Path(config_filename)
     with open(config_filename, "r") as cf:

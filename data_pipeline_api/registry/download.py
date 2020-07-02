@@ -48,7 +48,7 @@ def _parse_read_config(read_config: ReadConfig, data_registry_url: str, token: s
 
     :param read_config: single read block read from the config
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     :return: validated and parsed read block
     """
     if "where" not in read_config:
@@ -87,7 +87,7 @@ def _get_data_product_version_and_components(
 
     :param parsed_config: a read config block parsed to the relevant data
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     :return: a pair of data_product_version data, List[data_product_version_component[name]]
     """
     query_data = {DataRegistryFilter.data_product: parsed_config.data_product}
@@ -179,7 +179,7 @@ def _get_output_info(
     :param data_product_name: name of the data_product, used to generate the download path
     :param data_product_version: data_product_version json data
     :param data_directory: base directory for downloading data to
-    :param token: github personal access token
+    :param token: personal access token
     :return: required information to download the data from source to disk
     """
     # lookup the data at the data_product_version's store url and retrieve the storage_location path
@@ -245,7 +245,7 @@ def download_from_configs(
     :param read_configs: list of read blocks
     :param data_directory: base directory for downloading data to
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     """
     data_directory = Path(data_directory)
     logger.info(f"Creating data directory if it does not exist: {data_directory}")
@@ -280,7 +280,7 @@ def download_from_config_file(config_filename: Union[Path, str], data_registry_u
      
     :param config_filename: filename (str or Path) of the config.yaml file 
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     """
     config_filename = Path(config_filename)
     with open(config_filename, "r") as cf:

@@ -32,6 +32,7 @@ class DataRegistryTarget:
     """
     Full set of Data Registry end points
     """
+
     accessibility = "accessibility"
     data_product = "data_product"
     data_product_type = "data_product_type"
@@ -57,6 +58,7 @@ class DataRegistryField:
     """
     Incomplete set of Data Registry Fields - only those that are being used as constants
     """
+
     inputs = "inputs"
     outputs = "outputs"
     supersedes = "supersedes"
@@ -89,6 +91,7 @@ class DataRegistryFilter:
     """
     Full set of Data Registry Filters
     """
+
     version_identifier = DataRegistryField.version_identifier
     model = DataRegistryField.model
     processing_script = DataRegistryField.processing_script
@@ -101,12 +104,18 @@ class DataRegistryFilter:
     username = DataRegistryField.username
 
 
-FILTERS = set([a for a, v in DataRegistryFilter.__dict__.items()
-               if not a.startswith('__')
-               and not callable(getattr(DataRegistryFilter, a))])
+FILTERS = set(
+    [
+        a
+        for a, v in DataRegistryFilter.__dict__.items()
+        if not a.startswith("__") and not callable(getattr(DataRegistryFilter, a))
+    ]
+)
 
 
-def get_remote_filesystem_and_path(protocol: str, uri: str, path: str, storage_options: Dict[str, Any] = None) -> Tuple[AbstractFileSystem, str]:
+def get_remote_filesystem_and_path(
+    protocol: str, uri: str, path: str, storage_options: Dict[str, Any] = None
+) -> Tuple[AbstractFileSystem, str]:
     storage_options = {} if storage_options is None else storage_options
     if protocol == "github" and re.match(r"\w+/\w+", uri):
         uri = f"github://{uri.split('/')[0]}:{uri.split('/')[1]}@master/"
@@ -123,7 +132,10 @@ def get_remote_filesystem_and_path(protocol: str, uri: str, path: str, storage_o
         inferred_options = infer_storage_options(uri)
         username = storage_options.pop("username", None) or inferred_options.get("username")
         password = storage_options.pop("password", None) or inferred_options.get("password")
-        return FTPFileSystem(host=inferred_options["host"], username=username, password=password, **storage_options), inferred_options["path"]
+        return (
+            FTPFileSystem(host=inferred_options["host"], username=username, password=password, **storage_options),
+            inferred_options["path"],
+        )
     elif protocol == "github":
         # infer options on a github uri reads the org, repo and sha incorrectly (as if it were an ftp uri)
         # this is because it uses urllib.parse.urlsplit under the hood
@@ -160,7 +172,7 @@ def get_headers(token: str) -> Dict[str, str]:
     """
     Returns authorization header for the data registry with the provided token.
 
-    :param token: github personal access token
+    :param token: personal access token
     :return: Authorization headers
     """
     return {"Authorization": f"token {token}"} if token else {}
@@ -183,7 +195,7 @@ def get_on_end_point(end_point: str, token: str, query_str: Optional[str] = None
     Calls GET on the target end point of the data registry and returns the result
 
     :param end_point: url of the data registry to get
-    :param token: github personal access token
+    :param token: personal access token
     :param query_str: optional query string to append to the end point
     :return: data returned from calling GET on the end point
     """
@@ -195,8 +207,9 @@ def get_on_end_point(end_point: str, token: str, query_str: Optional[str] = None
     return result.json()
 
 
-def get_data(query_data: YamlDict, target: str, data_registry_url: str, token: str, exact: bool = True) -> Optional[
-    Union[Dict[str, str], List[Dict[str, str]]]]:
+def get_data(
+    query_data: YamlDict, target: str, data_registry_url: str, token: str, exact: bool = True
+) -> Optional[Union[Dict[str, str], List[Dict[str, str]]]]:
     """
     Gets the full set of data matching the provided data at the target data registry end point. If the data is not
     present None is returned.
@@ -204,7 +217,7 @@ def get_data(query_data: YamlDict, target: str, data_registry_url: str, token: s
     :param query_data: Dict of data, keys are str and values are either str or a nested dict referring to another piece of data
     :param target: target end point of the data registry
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     :param exact: If exact is True: 1 result -> return that result, 2+ results -> raise an error, 0 results -> return None
                   If exact is False: 1+ results -> return results in list, 0 results -> return None
     :return: reference url to existing data or None if it does not exist
@@ -222,7 +235,8 @@ def get_data(query_data: YamlDict, target: str, data_registry_url: str, token: s
         return result[0]
     else:
         raise ValueError(
-            f"{len(result)} matching data item(s) found for exact query '{query_str}' to target '{target}'")
+            f"{len(result)} matching data item(s) found for exact query '{query_str}' to target '{target}'"
+        )
 
 
 def get_reference(query_data: YamlDict, target: str, data_registry_url: str, token: str) -> Optional[str]:
@@ -233,7 +247,7 @@ def get_reference(query_data: YamlDict, target: str, data_registry_url: str, tok
     :param query_data: Dict of data, keys are str and values are either str or a nested dict referring to another piece of data
     :param target: target end point of the data registry
     :param data_registry_url: base url of the data registry
-    :param token: github personal access token
+    :param token: personal access token
     :return: reference url to existing data or None if it does not exist
     """
     result = get_data(query_data, target, data_registry_url, token)
