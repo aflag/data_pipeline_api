@@ -168,7 +168,7 @@ def _add_data_registry_posts(
         },
     )
     posts.extend(
-        [storage_location, data_product_type, data_product, data_product_version, data_product_version_component,]
+        [storage_location, data_product_type, data_product, data_product_version, data_product_version_component]
     )
     return data_product_version_component
 
@@ -195,8 +195,8 @@ def _add_model_run(
     model_run = _create_target_data_dict(
         DataRegistryTarget.model_run,
         {
-            DataRegistryField.release_id: run_id,
-            DataRegistryField.release_date: open_timestamp,
+            DataRegistryField.run_id: run_id,
+            DataRegistryField.run_date: open_timestamp,
             DataRegistryField.description: run_id,
             DataRegistryField.model_config: "",
             DataRegistryField.submission_script: "",
