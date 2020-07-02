@@ -100,7 +100,7 @@ def _add_storage_type_and_root(
         storage_roots = get_data({}, DataRegistryTarget.storage_root, data_registry_url, token, exact=False)
         for root in storage_roots:
             if root["type"] == storage_type["url"] and root["uri"] == remote_uri:
-                storage_root = root
+                storage_root = root["url"]
                 break
         if storage_root is None:
             storage_root = _create_target_data_dict(
@@ -125,7 +125,7 @@ def _add_data_registry_posts(
     component_name: str,
     accessibility: str,
     calculated_hash: str,
-    responsible_person: str,
+    responsible_person: YamlDict,
     storage_root: YamlDict,
 ) -> YamlDict:
     storage_location = _create_target_data_dict(
@@ -178,7 +178,7 @@ def _add_model_run(
     model_version_str: str,
     model_name: str,
     run_id: str,
-    responsible_person: str,
+    responsible_person: YamlDict,
     inputs: List[str],
     outputs: List[YamlDict],
     data_registry_url: str,
@@ -210,8 +210,8 @@ def _add_model_run(
 
 
 def unique_posts(posts: List[YamlDict]) -> List[YamlDict]:
-    set_of_jsons = {json.dumps(d, sort_keys=True) for d in posts}
-    return [json.loads(t) for t in set_of_jsons]
+    set_of_yamls = {yaml.safe_dump(d) for d in posts}
+    return [yaml.safe_load(t) for t in set_of_yamls]
 
 
 def upload_model_run(
@@ -241,7 +241,7 @@ def upload_model_run(
         data_directory = config_filename.parent / data_directory
     run_id = config["run_id"]
     config_yaml = config["config"]
-    responsible_person = config_yaml["responsible_person"]
+    responsible_person = _create_target_data_dict(DataRegistryTarget.users, {DataRegistryField.username: config["responsible_person"]})
     model_version_str = config_yaml["model_version"]
     model_name = config_yaml["model_name"]
 

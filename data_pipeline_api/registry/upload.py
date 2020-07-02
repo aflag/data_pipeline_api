@@ -31,6 +31,8 @@ def resolve_references(data: YamlDict, data_registry_url: str, token: str) -> Di
             nested_data = value["data"]
             nested_data = resolve_references(nested_data, data_registry_url, token)
             return get_reference(nested_data, nested_target, data_registry_url, token)
+        elif isinstance(value, List):
+            return [resolve(inner_value) for inner_value in value]
         else:
             return value.strip()
 
