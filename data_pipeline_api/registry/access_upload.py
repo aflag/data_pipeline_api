@@ -210,8 +210,8 @@ def _add_model_run(
 
 
 def unique_posts(posts: List[YamlDict]) -> List[YamlDict]:
-    set_of_yamls = {yaml.safe_dump(d) for d in posts}
-    return [yaml.safe_load(t) for t in set_of_yamls]
+    set_of_yamls = {yaml.safe_dump(d): None for d in posts}
+    return [yaml.safe_load(t) for t in set_of_yamls.keys()]
 
 
 def upload_model_run(
