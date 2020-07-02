@@ -70,7 +70,7 @@ def upload_to_storage(uri: str, storage_options: Dict[str, Any], data_directory:
     protocol = urllib.parse.urlsplit(uri).scheme
     upload_path = filename.absolute().relative_to(data_directory.absolute()).as_posix()
     fs, path = get_remote_filesystem_and_path(protocol, uri, upload_path, storage_options)
-    fs.upload(filename.as_posix(), path)
+    fs.put(filename.as_posix(), path)
     return path
 
 

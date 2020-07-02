@@ -12,6 +12,7 @@ from fsspec.implementations.ftp import FTPFileSystem
 from fsspec.implementations.github import GithubFileSystem
 from fsspec.implementations.http import HTTPFileSystem
 from fsspec.implementations.local import LocalFileSystem
+from fsspec.implementations.sftp import SFTPFileSystem
 from fsspec.utils import infer_storage_options
 from s3fs import S3FileSystem
 
@@ -131,6 +132,12 @@ def get_remote_filesystem_and_path(protocol: str, uri: str, path: str, storage_o
         repo = inferred_options.get("password")
         sha = inferred_options.get("host") or "master"
         return GithubFileSystem(org=org, repo=repo, sha=sha, **storage_options), inferred_options.get("path")
+    elif protocol in {"sftp", "ssh"}:
+        inferred_options = infer_storage_options(uri)
+        username = storage_options.pop("username", None) or inferred_options.get("username")
+        password = storage_options.pop("password", None) or inferred_options.get("password")
+        uri = (Path(inferred_options["path"]) / Path(path)).as_posix()
+        return SFTPFileSystem(host=inferred_options["host"], username=username, password=password), uri
     elif protocol == "s3":
         uri = urllib.parse.urljoin(uri, path)
         return S3FileSystem(**storage_options), uri

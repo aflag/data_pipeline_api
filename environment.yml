@@ -16,6 +16,7 @@ dependencies:
   - s3fs=0.4.2
   - click=7.1.2
   - requests=2.23.0
+  - paramiko=2.7.1
 
   # test dependencies
   - coverage=5.0

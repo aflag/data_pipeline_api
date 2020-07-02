@@ -22,7 +22,7 @@ from data_pipeline_api.registry.common import (
     DEFAULT_DATA_REGISTRY_URL,
     DataRegistryTarget,
     DataRegistryFilter,
-    DataRegistryField,
+    DataRegistryField, get_remote_filesystem_and_path,
 )
 
 
@@ -189,14 +189,7 @@ def _get_output_info(
     # lookup the data at the store's store_root url and retrieve the uri
     store_root = get_on_end_point(store[DataRegistryField.store_root], token)
     uri = store_root[DataRegistryField.uri]
-    # We need to find out what fsspec views as the path from the uri for this protocol, and combine it with our
-    # storage_location path to find the 'true' path to our file to use with fsspec
-    storage_options = fsspec.utils.infer_storage_options(uri)
-    root_path = storage_options.pop("path")
-
     storage_type = get_on_end_point(store_root[DataRegistryField.type], token)[DataRegistryField.name]
-
-    path = urllib.parse.urljoin(root_path + "/", path)
 
     output_filename = (
         Path(data_product_name) / data_product_version[DataRegistryField.version_identifier] / Path(path).name
@@ -230,8 +223,9 @@ def _download_data(output_info: OutputInfo) -> None:
             f"Downloading public data from uri: {output_info.source_uri}, path: {output_info.source_path} to "
             f"{output_info.output_path}"
         )
-        fsspec.open(output_info.source_uri, protocol=output_info.source_protocol).fs.download(
-            output_info.source_path, output_info.output_path
+        fs, source_path = get_remote_filesystem_and_path(output_info.source_protocol, output_info.source_uri, output_info.source_path)
+        fs.get(
+            source_path, output_info.output_path
         )
     else:
         # FIXME: Currently we only download data that's public, it's not clear what will happen in other cases
