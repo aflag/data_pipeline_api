@@ -162,3 +162,4 @@ def test_resolve_references_recurse():
                 call({"name": "B", "b": "C"}, "t", DATA_REGISTRY_URL, TOKEN),
             ]
         )
+

@@ -77,7 +77,7 @@ def _verify_hash(filename: Path, access_calculated_hash: str) -> None:
     """
     with open(filename, "rb") as file:
         calculated_hash = sha1(file.read()).hexdigest()
-    if access_calculated_hash != access_calculated_hash:
+    if access_calculated_hash != calculated_hash:
         raise ValueError(
             f"access log contains hash {access_calculated_hash} but calculated hash of {filename} is {calculated_hash}"
         )

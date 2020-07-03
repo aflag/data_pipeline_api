@@ -8,6 +8,10 @@ from data_pipeline_api.registry.common import (
     get_end_point,
     get_headers,
     get_remote_filesystem_and_path,
+    build_query_string,
+    DataRegistryFilter,
+    DataRegistryField,
+    FILTERS,
 )
 
 DATA_REGISTRY_URL = "data/"
@@ -248,3 +252,27 @@ def test_get_remote_filesystem_and_path(patch_fs, protocol, uri, path, kwargs, e
     assert path == expected_path
     assert rfs._mock_name == patch_fs
     rfs.assert_called_once_with(**expected_call)
+
+
+def test_build_query_string():
+    assert build_query_string({}, DATA_REGISTRY_URL) == ""
+    assert build_query_string({DataRegistryFilter.name: "name"}, DATA_REGISTRY_URL) == "name=name"
+    assert build_query_string({"not_a_filter": "not_a_filter"}, DATA_REGISTRY_URL) == ""
+    assert (
+        build_query_string({"not_a_filter": "not_a_filter", DataRegistryFilter.name: "name"}, DATA_REGISTRY_URL)
+        == "name=name"
+    )
+    assert (
+        build_query_string({DataRegistryFilter.name: '!"£$%^&*()[]{}'}, DATA_REGISTRY_URL)
+        == "name=%21%22%C2%A3%24%25%5E%26%2A%28%29%5B%5D%7B%7D"
+    )
+    assert build_query_string({DataRegistryFilter.name: f"{DATA_REGISTRY_URL}/1/"}, DATA_REGISTRY_URL) == "name=1"
+    query_data = {}
+    for field in (
+        a
+        for a, v in DataRegistryField.__dict__.items()
+        if not a.startswith("__") and not callable(getattr(DataRegistryField, a))
+    ):
+        query_data[field] = "test"
+    query_string = build_query_string(query_data, DATA_REGISTRY_URL)
+    assert set(query_string.replace("&", "").replace("test", "")[:-1].split("=")) == FILTERS
